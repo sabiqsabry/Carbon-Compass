@@ -37,6 +37,7 @@ app = FastAPI(title="Carbon Compass API", lifespan=lifespan)
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:5174",
 ]
 
 app.add_middleware(

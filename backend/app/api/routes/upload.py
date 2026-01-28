@@ -58,14 +58,14 @@ async def upload_report(
 
         if existing_report:
             # Update existing report
-            existing_report.size_bytes = len(contents)
-            existing_report.uploaded_at = datetime.now(timezone.utc)
+            existing_report.file_size_bytes = len(contents)
+            existing_report.upload_date = datetime.now(timezone.utc)
         else:
             # Create new report
             report = Report(
                 filename=safe_name,
-                size_bytes=len(contents),
-                uploaded_at=datetime.now(timezone.utc),
+                file_size_bytes=len(contents),
+                upload_date=datetime.now(timezone.utc),
             )
             db.add(report)
 
@@ -90,7 +90,7 @@ async def list_reports(
     
     try:
         # Try to fetch from database first
-        stmt = select(Report).order_by(Report.uploaded_at.desc())
+        stmt = select(Report).order_by(Report.upload_date.desc())
         result = await db.execute(stmt)
         reports_from_db = result.scalars().all()
         
@@ -98,8 +98,8 @@ async def list_reports(
             return [
                 {
                     "filename": report.filename,
-                    "size_bytes": report.size_bytes,
-                    "uploaded_at": report.uploaded_at.isoformat() if report.uploaded_at else None,
+                    "size_bytes": report.file_size_bytes,
+                    "uploaded_at": report.upload_date.isoformat() if report.upload_date else None,
                 }
                 for report in reports_from_db
             ]
@@ -144,8 +144,8 @@ async def get_report(
         if report:
             return {
                 "filename": report.filename,
-                "size_bytes": report.size_bytes,
-                "uploaded_at": report.uploaded_at.isoformat() if report.uploaded_at else None,
+                "size_bytes": report.file_size_bytes,
+                "uploaded_at": report.upload_date.isoformat() if report.upload_date else None,
             }
     except Exception as e:
         print(f"⚠️  Failed to fetch report from database: {e}")
