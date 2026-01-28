@@ -1,0 +1,23 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+.DS_Store
+.env
+data/training_data/*
+data/sample_reports/*
+
+# Node
+node_modules/
+dist/
+build/
+.output/
+
+# Reports (Exclude all PDFs and subfolders)
+reports/
+!reports/metadata.json
+
+# Documentation (Only allow README.md)
+*.md
+!README.md
