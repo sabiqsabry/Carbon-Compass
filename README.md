@@ -94,5 +94,5 @@ Visit **http://localhost:5173** to access the application.
 ---
 
 <div align="center">
-Built with ❤️ for a sustainable future.
+Built by <a href="https://sabiq.dev/" target="_blank">Sabiq Sabry</a>
 </div>
