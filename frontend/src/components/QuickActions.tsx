@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { UploadCloud, Files, LineChart } from 'lucide-react'
+import { UploadCloud, Files, LineChart, Calculator, ShieldCheck } from 'lucide-react'
 
 const actions = [
   {
@@ -21,6 +21,20 @@ const actions = [
     title: 'Compare Companies',
     description: 'Side-by-side comparison of multiple reports',
     to: '/compare',
+    color: 'amber',
+  },
+  {
+    icon: Calculator,
+    title: 'Calculate Emissions',
+    description: 'Compute carbon footprint from activity data',
+    to: '/calculator',
+    color: 'emerald',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Verify a Report',
+    description: 'Compare reported claims vs calculated actuals',
+    to: '/verify',
     color: 'amber',
   },
 ]

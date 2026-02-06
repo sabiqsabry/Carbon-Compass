@@ -178,3 +178,109 @@ class Summary(Base):
 
   analysis: Mapped[AnalysisResult] = relationship(back_populates="summary")
 
+
+class Calculation(Base):
+    __tablename__ = "calculations"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    total_emissions_kg: Mapped[float] = mapped_column(Float, default=0.0)
+    scope_1_kg: Mapped[float] = mapped_column(Float, default=0.0)
+    scope_2_kg: Mapped[float] = mapped_column(Float, default=0.0)
+    scope_3_kg: Mapped[float] = mapped_column(Float, default=0.0)
+    activity_count: Mapped[int] = mapped_column(Integer, default=0)
+    source_file: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    activities: Mapped[list["CalculationActivity"]] = relationship(
+        back_populates="calculation",
+        cascade="all, delete-orphan",
+    )
+    verifications: Mapped[list["Verification"]] = relationship(
+        back_populates="calculation",
+        cascade="all, delete-orphan",
+    )
+
+
+class CalculationActivity(Base):
+    __tablename__ = "calculation_activities"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    calculation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("calculations.id", ondelete="CASCADE"),
+        index=True,
+    )
+    category: Mapped[str] = mapped_column(String)
+    sub_category: Mapped[str | None] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    amount: Mapped[float] = mapped_column(Float)
+    unit: Mapped[str] = mapped_column(String)
+    country: Mapped[str | None] = mapped_column(String, nullable=True)
+    emissions_kg: Mapped[float] = mapped_column(Float, default=0.0)
+    scope: Mapped[int] = mapped_column(Integer, default=3)
+    factor_used: Mapped[float] = mapped_column(Float, default=0.0)
+
+    calculation: Mapped["Calculation"] = relationship(back_populates="activities")
+
+
+class Verification(Base):
+    __tablename__ = "verifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    report_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("reports.id", ondelete="CASCADE"),
+        index=True,
+    )
+    calculation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("calculations.id", ondelete="CASCADE"),
+        index=True,
+    )
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    match_score: Mapped[float] = mapped_column(Float, default=0.0)
+    discrepancy_count: Mapped[int] = mapped_column(Integer, default=0)
+    summary: Mapped[str] = mapped_column(Text, default="")
+
+    report: Mapped["Report"] = relationship()
+    calculation: Mapped["Calculation"] = relationship(back_populates="verifications")
+    discrepancies: Mapped[list["VerificationDiscrepancy"]] = relationship(
+        back_populates="verification",
+        cascade="all, delete-orphan",
+    )
+
+
+class VerificationDiscrepancy(Base):
+    __tablename__ = "verification_discrepancies"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    verification_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("verifications.id", ondelete="CASCADE"),
+        index=True,
+    )
+    metric_type: Mapped[str] = mapped_column(String)
+    reported_value: Mapped[float] = mapped_column(Float)
+    calculated_value: Mapped[float] = mapped_column(Float)
+    difference_percentage: Mapped[float] = mapped_column(Float)
+    severity: Mapped[str] = mapped_column(String)
+
+    verification: Mapped["Verification"] = relationship(back_populates="discrepancies")
+
