@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.routes import analysis, compare, upload
+from .api.routes import analysis, calculator, compare, upload, verification
 from .models.database import close_db, init_db
 from .models.schemas import HealthResponse
 
@@ -53,6 +53,8 @@ API_PREFIX = "/api/v1"
 app.include_router(upload.router, prefix=API_PREFIX)
 app.include_router(analysis.router, prefix=API_PREFIX)
 app.include_router(compare.router, prefix=API_PREFIX)
+app.include_router(calculator.router, prefix=API_PREFIX)
+app.include_router(verification.router, prefix=API_PREFIX)
 
 
 @app.get("/health", response_model=HealthResponse)

@@ -1,0 +1,32 @@
+{
+  "source": "UK DEFRA 2024",
+  "last_updated": "2024",
+  "disposal_methods": {
+    "unit": "kg CO2e per tonne",
+    "methods": {
+      "landfill_mixed": { "name": "Landfill (Mixed Waste)", "value": 446, "scope": 3 },
+      "landfill_food": { "name": "Landfill (Food Waste)", "value": 580, "scope": 3 },
+      "landfill_paper": { "name": "Landfill (Paper)", "value": 1042, "scope": 3 },
+      "landfill_plastic": { "name": "Landfill (Plastic)", "value": 21, "scope": 3 },
+      "incineration": { "name": "Incineration", "value": 21, "scope": 3 },
+      "recycling_average": { "name": "Recycling (Average)", "value": -50, "scope": 3 },
+      "composting": { "name": "Composting", "value": 10, "scope": 3 },
+      "anaerobic_digestion": { "name": "Anaerobic Digestion", "value": -100, "scope": 3 }
+    }
+  },
+  "material_recycling": {
+    "unit": "kg CO2e per tonne (avoided emissions)",
+    "materials": {
+      "paper": { "name": "Paper / Cardboard", "value": -800 },
+      "plastic_average": { "name": "Plastic (Average)", "value": -1400 },
+      "plastic_pet": { "name": "Plastic (PET)", "value": -1500 },
+      "plastic_hdpe": { "name": "Plastic (HDPE)", "value": -1300 },
+      "glass": { "name": "Glass", "value": -300 },
+      "aluminium": { "name": "Aluminium", "value": -9000 },
+      "steel": { "name": "Steel", "value": -1800 },
+      "wood": { "name": "Wood", "value": -600 },
+      "textiles": { "name": "Textiles", "value": -3100 },
+      "electronics": { "name": "Electronics (WEEE)", "value": -2000 }
+    }
+  }
+}

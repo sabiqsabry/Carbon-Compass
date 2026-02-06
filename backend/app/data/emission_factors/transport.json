@@ -1,0 +1,60 @@
+{
+  "source": "UK DEFRA 2024",
+  "last_updated": "2024",
+  "road": {
+    "unit": "kg CO2e per km",
+    "vehicles": {
+      "small_petrol_car": { "name": "Small Petrol Car", "value": 0.14, "scope": 1 },
+      "medium_petrol_car": { "name": "Medium Petrol Car", "value": 0.17, "scope": 1 },
+      "large_petrol_car": { "name": "Large Petrol Car", "value": 0.21, "scope": 1 },
+      "small_diesel_car": { "name": "Small Diesel Car", "value": 0.12, "scope": 1 },
+      "medium_diesel_car": { "name": "Medium Diesel Car", "value": 0.16, "scope": 1 },
+      "large_diesel_car": { "name": "Large Diesel Car", "value": 0.19, "scope": 1 },
+      "average_car": { "name": "Average Car", "value": 0.17, "scope": 3 },
+      "electric_car": { "name": "Electric Car (avg grid)", "value": 0.05, "scope": 2 },
+      "hybrid_car": { "name": "Hybrid Car", "value": 0.12, "scope": 1 },
+      "motorcycle": { "name": "Motorcycle", "value": 0.08, "scope": 1 },
+      "van": { "name": "Van", "value": 0.24, "scope": 1 },
+      "hgv_rigid": { "name": "HGV (Rigid)", "value": 0.48, "scope": 1 },
+      "hgv_articulated": { "name": "HGV (Articulated)", "value": 0.93, "scope": 1 },
+      "bus": { "name": "Bus", "value": 0.089, "scope": 3 },
+      "taxi": { "name": "Taxi", "value": 0.15, "scope": 3 }
+    }
+  },
+  "flights": {
+    "unit": "kg CO2e per passenger-km",
+    "note": "Includes radiative forcing multiplier",
+    "types": {
+      "domestic": { "name": "Domestic Flight", "value": 0.246, "scope": 3 },
+      "short_haul": { "name": "Short-Haul International", "value": 0.151, "scope": 3 },
+      "long_haul": { "name": "Long-Haul International", "value": 0.195, "scope": 3 }
+    },
+    "class_multipliers": {
+      "economy": 1.0,
+      "premium_economy": 1.6,
+      "business": 2.0,
+      "first": 4.0
+    },
+    "average_distances_km": {
+      "domestic": 500,
+      "short_haul": 1500,
+      "long_haul": 8000
+    }
+  },
+  "rail": {
+    "unit": "kg CO2e per passenger-km",
+    "types": {
+      "national_rail": { "name": "National Rail", "value": 0.035, "scope": 3 },
+      "light_rail": { "name": "Light Rail / Metro", "value": 0.029, "scope": 3 },
+      "international_rail": { "name": "International Rail (Eurostar)", "value": 0.006, "scope": 3 }
+    }
+  },
+  "shipping": {
+    "unit": "kg CO2e per tonne-km",
+    "types": {
+      "container_ship": { "name": "Container Ship", "value": 0.016, "scope": 3 },
+      "bulk_carrier": { "name": "Bulk Carrier", "value": 0.005, "scope": 3 },
+      "tanker": { "name": "Tanker", "value": 0.005, "scope": 3 }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "source": "UK DEFRA 2024",
+  "last_updated": "2024",
+  "unit": "kg CO2e per cubic metre",
+  "factors": {
+    "supply": {
+      "name": "Water Supply",
+      "value": 0.149,
+      "scope": 3
+    },
+    "treatment": {
+      "name": "Water Treatment",
+      "value": 0.272,
+      "scope": 3
+    },
+    "supply_and_treatment": {
+      "name": "Water Supply + Treatment",
+      "value": 0.421,
+      "scope": 3
+    }
+  },
+  "unit_conversions": {
+    "cubic_metres_to_litres": 1000,
+    "cubic_metres_to_gallons": 264.172
+  }
+}

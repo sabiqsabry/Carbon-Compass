@@ -1,0 +1,96 @@
+{
+  "unit_default": "kg CO2e per litre",
+  "source": "UK DEFRA 2024",
+  "last_updated": "2024",
+  "fuels": {
+    "petrol": {
+      "name": "Petrol (Gasoline)",
+      "factors": {
+        "litres": 2.31,
+        "gallons": 8.75,
+        "kg": 2.97,
+        "tonnes": 2970
+      },
+      "default_unit": "litres",
+      "scope": 1
+    },
+    "diesel": {
+      "name": "Diesel",
+      "factors": {
+        "litres": 2.68,
+        "gallons": 10.14,
+        "kg": 3.17,
+        "tonnes": 3170
+      },
+      "default_unit": "litres",
+      "scope": 1
+    },
+    "natural_gas": {
+      "name": "Natural Gas",
+      "factors": {
+        "cubic_metres": 2.02,
+        "kwh": 0.183,
+        "therms": 5.34
+      },
+      "default_unit": "cubic_metres",
+      "scope": 1
+    },
+    "lpg": {
+      "name": "LPG",
+      "factors": {
+        "litres": 1.56,
+        "kg": 2.94,
+        "kwh": 0.214,
+        "tonnes": 2940
+      },
+      "default_unit": "litres",
+      "scope": 1
+    },
+    "coal_industrial": {
+      "name": "Coal (Industrial)",
+      "factors": {
+        "kg": 2.42,
+        "tonnes": 2420
+      },
+      "default_unit": "kg",
+      "scope": 1
+    },
+    "heating_oil": {
+      "name": "Heating Oil",
+      "factors": {
+        "litres": 2.54,
+        "gallons": 9.61,
+        "kwh": 0.247
+      },
+      "default_unit": "litres",
+      "scope": 1
+    },
+    "aviation_fuel": {
+      "name": "Aviation Fuel (Kerosene)",
+      "factors": {
+        "litres": 2.55,
+        "tonnes": 3150
+      },
+      "default_unit": "litres",
+      "scope": 1
+    },
+    "wood_pellets": {
+      "name": "Wood Pellets",
+      "factors": {
+        "kg": 0.07,
+        "tonnes": 70
+      },
+      "default_unit": "kg",
+      "scope": 1
+    },
+    "biogas": {
+      "name": "Biogas",
+      "factors": {
+        "cubic_metres": 0.0002,
+        "kwh": 0.00004
+      },
+      "default_unit": "cubic_metres",
+      "scope": 1
+    }
+  }
+}
