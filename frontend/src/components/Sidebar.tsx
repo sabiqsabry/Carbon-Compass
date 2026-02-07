@@ -1,4 +1,4 @@
-import { BarChart3, Calculator, Files, LineChart, ShieldCheck, UploadCloud } from 'lucide-react'
+import { BarChart3, Calculator, FileSpreadsheet, Files, LineChart, ShieldCheck, UploadCloud } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const reportItems = [
@@ -10,6 +10,7 @@ const reportItems = [
 
 const calculateItems = [
   { to: '/calculator', label: 'Calculator', icon: Calculator },
+  { to: '/calculator/bulk', label: 'Bulk Upload', icon: FileSpreadsheet },
   { to: '/verify', label: 'Verify Report', icon: ShieldCheck },
 ]
 

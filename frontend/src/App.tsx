@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ComparePage } from './pages/ComparePage'
 import { CalculatorPage } from './pages/CalculatorPage'
 import { VerificationPage } from './pages/VerificationPage'
+import { BulkUploadPage } from './pages/BulkUploadPage'
 
 const queryClient = new QueryClient()
 
@@ -23,6 +24,7 @@ function App(): JSX.Element {
             <Route path="/reports/:filename" element={<AnalysisPage />} />
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/calculator" element={<CalculatorPage />} />
+            <Route path="/calculator/bulk" element={<BulkUploadPage />} />
             <Route path="/verify" element={<VerificationPage />} />
             <Route path="/verify/:filename" element={<VerificationPage />} />
           </Routes>

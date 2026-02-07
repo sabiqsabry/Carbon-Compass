@@ -175,3 +175,28 @@ async def verify_summary(
             for m in metrics
         ],
     }
+
+
+@router.get("/verifications")
+async def list_verifications(
+    db: AsyncSession = Depends(get_session),
+) -> List[Dict[str, Any]]:
+    """List all past verification results."""
+    from ...models.orm_models import Verification as VerificationModel
+
+    stmt = select(VerificationModel).order_by(VerificationModel.verified_at.desc())
+    result = await db.execute(stmt)
+    verifications = result.scalars().all()
+
+    return [
+        {
+            "id": str(v.id),
+            "report_id": str(v.report_id),
+            "calculation_id": str(v.calculation_id),
+            "verified_at": v.verified_at.isoformat() if v.verified_at else None,
+            "match_score": v.match_score,
+            "discrepancy_count": v.discrepancy_count,
+            "summary": v.summary,
+        }
+        for v in verifications
+    ]

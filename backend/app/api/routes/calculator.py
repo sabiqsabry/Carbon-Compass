@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...models.database import get_session
+from ...models.orm_models import Calculation, CalculationActivity
 from ...services.activity_parser import ActivityParser
 from ...services.emissions_calculator import ActivityInput, EmissionsCalculator
 from ...services.factor_loader import FactorLoader
@@ -243,3 +247,152 @@ async def list_countries() -> List[Dict[str, Any]]:
     """List all countries with available electricity emission factors."""
     loader = _get_loader()
     return loader.list_available_countries()
+
+
+# ── Persistence Routes ───────────────────────────────────────
+
+@router.post("/calculate/save")
+async def save_calculation(
+    request: BulkActivityRequest,
+    name: Optional[str] = Query(None, description="Optional name for this calculation"),
+    db: AsyncSession = Depends(get_session),
+) -> Dict[str, Any]:
+    """Calculate and save emissions to the database.
+
+    Persists the calculation and all activity line items for later retrieval.
+    """
+    calculator = _get_calculator()
+
+    try:
+        activities = [
+            ActivityInput(
+                category=a.category,
+                sub_category=a.sub_category,
+                amount=a.amount,
+                unit=a.unit or "",
+                country=a.country,
+                flight_class=a.flight_class,
+                return_trip=a.return_trip,
+            )
+            for a in request.activities
+        ]
+        result = calculator.calculate_total(activities)
+
+        # Save to database
+        calc = Calculation(
+            name=name,
+            total_emissions_kg=result.total_kg_co2e,
+            scope_1_kg=result.by_scope.get("scope_1", 0),
+            scope_2_kg=result.by_scope.get("scope_2", 0),
+            scope_3_kg=result.by_scope.get("scope_3", 0),
+            activity_count=result.activity_count,
+        )
+        db.add(calc)
+        await db.flush()
+
+        for r in result.breakdown:
+            activity = CalculationActivity(
+                calculation_id=calc.id,
+                category=r.activity_type,
+                sub_category=None,
+                amount=r.activity_amount,
+                unit=r.activity_unit,
+                emissions_kg=r.emissions_kg_co2e,
+                scope=r.scope,
+                factor_used=r.factor_used,
+            )
+            db.add(activity)
+
+        await db.commit()
+
+        response = result.to_dict()
+        response["calculation_id"] = str(calc.id)
+        return response
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/calculations")
+async def list_calculations(
+    db: AsyncSession = Depends(get_session),
+) -> List[Dict[str, Any]]:
+    """List all saved calculations."""
+    stmt = select(Calculation).order_by(Calculation.created_at.desc())
+    result = await db.execute(stmt)
+    calculations = result.scalars().all()
+
+    return [
+        {
+            "id": str(c.id),
+            "name": c.name,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "total_emissions_kg": c.total_emissions_kg,
+            "total_emissions_tonnes": c.total_emissions_kg / 1000,
+            "scope_1_kg": c.scope_1_kg,
+            "scope_2_kg": c.scope_2_kg,
+            "scope_3_kg": c.scope_3_kg,
+            "activity_count": c.activity_count,
+            "source_file": c.source_file,
+        }
+        for c in calculations
+    ]
+
+
+@router.get("/calculations/{calculation_id}")
+async def get_calculation(
+    calculation_id: str,
+    db: AsyncSession = Depends(get_session),
+) -> Dict[str, Any]:
+    """Get a saved calculation with its activity breakdown."""
+    import uuid as uuid_mod
+    try:
+        calc_uuid = uuid_mod.UUID(calculation_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid calculation ID")
+
+    stmt = select(Calculation).where(Calculation.id == calc_uuid)
+    result = await db.execute(stmt)
+    calc = result.scalar_one_or_none()
+
+    if not calc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calculation not found")
+
+    # Get activities
+    activities_stmt = select(CalculationActivity).where(
+        CalculationActivity.calculation_id == calc.id
+    )
+    activities_result = await db.execute(activities_stmt)
+    activities = activities_result.scalars().all()
+
+    return {
+        "id": str(calc.id),
+        "name": calc.name,
+        "created_at": calc.created_at.isoformat() if calc.created_at else None,
+        "total_emissions_kg": calc.total_emissions_kg,
+        "total_emissions_tonnes": calc.total_emissions_kg / 1000,
+        "scope_1_kg": calc.scope_1_kg,
+        "scope_2_kg": calc.scope_2_kg,
+        "scope_3_kg": calc.scope_3_kg,
+        "activity_count": calc.activity_count,
+        "source_file": calc.source_file,
+        "by_scope": {
+            "scope_1": calc.scope_1_kg,
+            "scope_2": calc.scope_2_kg,
+            "scope_3": calc.scope_3_kg,
+        },
+        "activities": [
+            {
+                "id": str(a.id),
+                "category": a.category,
+                "sub_category": a.sub_category,
+                "amount": a.amount,
+                "unit": a.unit,
+                "country": a.country,
+                "emissions_kg": a.emissions_kg,
+                "scope": a.scope,
+                "factor_used": a.factor_used,
+            }
+            for a in activities
+        ],
+    }

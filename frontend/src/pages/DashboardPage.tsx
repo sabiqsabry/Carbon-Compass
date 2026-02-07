@@ -21,7 +21,7 @@ export function DashboardPage(): JSX.Element {
         <p className="text-sm text-slate-400">AI-powered sustainability report analysis</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           icon={FileText}
           label="Total Reports"
@@ -48,6 +48,20 @@ export function DashboardPage(): JSX.Element {
           value="—"
           color="slate"
           subtitle="Calculate after analysis"
+        />
+        <StatCard
+          icon={Calculator}
+          label="Calculations Made"
+          value="0"
+          color="emerald"
+          subtitle="Emissions calculated"
+        />
+        <StatCard
+          icon={ShieldCheck}
+          label="Verifications Run"
+          value="0"
+          color="amber"
+          subtitle="Reports verified"
         />
       </div>
 
