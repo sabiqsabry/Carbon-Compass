@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
@@ -383,27 +384,130 @@ async def get_greenwashing(
 async def get_summary(
     filename: str,
     settings: Settings = Depends(get_settings),
+    db: AsyncSession = Depends(get_session),
+) -> Dict[str, Any]:
+    """Get summary for a report with generation status.
+
+    Returns ``status``: ``"completed"`` if summaries have been generated,
+    ``"pending"`` if summarisation has not run yet.
+    """
+    _ensure_exists(filename, settings)
+
+    # Check DB for existing summary
+    clean_name = Path(filename).name
+    try:
+        stmt = select(Report).where(Report.filename == clean_name)
+        result = await db.execute(stmt)
+        report = result.scalar_one_or_none()
+
+        if report:
+            analysis_stmt = (
+                select(AnalysisResult)
+                .where(AnalysisResult.report_id == report.id)
+                .where(AnalysisResult.status == "completed")
+                .order_by(AnalysisResult.analysed_at.desc())
+            )
+            analysis_result = await db.execute(analysis_stmt)
+            analysis = analysis_result.scalar_one_or_none()
+
+            if analysis:
+                summary_stmt = select(Summary).where(Summary.analysis_id == analysis.id)
+                summary_result = await db.execute(summary_stmt)
+                summary = summary_result.scalar_one_or_none()
+
+                if summary and (summary.executive_summary or summary.section_summaries):
+                    return {
+                        "status": "completed",
+                        "executive_summary": summary.executive_summary,
+                        "section_summaries": summary.section_summaries or [],
+                        "commitments": summary.commitments or [],
+                    }
+    except Exception as e:
+        print(f"⚠️  Failed to check summary in database: {e}")
+
+    return {
+        "status": "pending",
+        "executive_summary": "",
+        "section_summaries": [],
+        "commitments": [],
+    }
+
+
+@router.post("/analysis/{filename}/summarise")
+async def generate_summary(
+    filename: str,
+    settings: Settings = Depends(get_settings),
     orchestrator: AnalysisOrchestrator = Depends(get_orchestrator),
     db: AsyncSession = Depends(get_session),
 ) -> Dict[str, Any]:
-    """Get summary for a report."""
+    """Trigger summarisation for a report (runs the BART model).
+
+    This is intentionally a separate endpoint so the main analysis can
+    return quickly while summarisation runs in the background.  The heavy
+    model inference is offloaded to a thread so it doesn't block the
+    event loop.
+    """
     _ensure_exists(filename, settings)
-    
-    # Try database first
-    db_result = await _get_analysis_from_db(Path(filename).name, db)
-    if db_result:
-        return db_result["summary"]
-    
-    # Fallback to orchestrator
-    result = orchestrator.analyse(Path(filename).name)
-    await _save_analysis_to_db(Path(filename).name, result, db)
+    clean_name = Path(filename).name
+
+    # Run the CPU-heavy summarisation in a thread pool
+    summary_result = await asyncio.to_thread(orchestrator.summarise, clean_name)
+
+    # Persist to database
+    try:
+        stmt = select(Report).where(Report.filename == clean_name)
+        result = await db.execute(stmt)
+        report = result.scalar_one_or_none()
+
+        if report:
+            analysis_stmt = (
+                select(AnalysisResult)
+                .where(AnalysisResult.report_id == report.id)
+                .where(AnalysisResult.status == "completed")
+                .order_by(AnalysisResult.analysed_at.desc())
+            )
+            analysis_result = await db.execute(analysis_stmt)
+            analysis = analysis_result.scalar_one_or_none()
+
+            if analysis:
+                # Update or create summary record
+                summary_stmt = select(Summary).where(Summary.analysis_id == analysis.id)
+                summary_db_result = await db.execute(summary_stmt)
+                existing_summary = summary_db_result.scalar_one_or_none()
+
+                section_data = [
+                    {"section_name": s.section_name, "summary": s.summary}
+                    for s in summary_result.section_summaries
+                ]
+                commitments_data = summary_result.commitments
+
+                if existing_summary:
+                    existing_summary.executive_summary = summary_result.executive_summary
+                    existing_summary.section_summaries = section_data
+                    existing_summary.commitments = commitments_data
+                else:
+                    new_summary = Summary(
+                        analysis_id=analysis.id,
+                        executive_summary=summary_result.executive_summary,
+                        section_summaries=section_data,
+                        commitments=commitments_data,
+                    )
+                    db.add(new_summary)
+
+                await db.commit()
+                print(f"✅ Saved summary for {clean_name} to database")
+    except Exception as e:
+        print(f"⚠️  Failed to save summary to database: {e}")
+        await db.rollback()
+
     return {
-        "executive_summary": result.summary.executive_summary,
+        "status": "completed",
+        "executive_summary": summary_result.executive_summary,
         "section_summaries": [
             {"section_name": s.section_name, "summary": s.summary}
-            for s in result.summary.section_summaries
+            for s in summary_result.section_summaries
         ],
-        "commitments": result.summary.commitments,
+        "commitments": summary_result.commitments,
     }
 
 

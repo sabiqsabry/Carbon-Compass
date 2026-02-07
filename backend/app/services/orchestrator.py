@@ -92,17 +92,12 @@ class AnalysisOrchestrator:
         current_step += 1
         self._report_progress("Greenwashing detection", current_step, step_count)
 
-        # Step e: Summarisation
+        # Step e: Summarisation (deferred — runs asynchronously after initial analysis)
         start = time.perf_counter()
-        sections_dict = {s.name: s.text for s in pdf_result.sections}
-        try:
-            summary_result = self.summariser.summarise_full_report(sections_dict)
-        except Exception:  # pragma: no cover - summarisation may be disabled
-            logger.exception("Summarisation failed; continuing with partial results")
-            summary_result = FullReportSummary(executive_summary="", section_summaries=[], commitments=[])
+        summary_result = FullReportSummary(executive_summary="", section_summaries=[], commitments=[])
         timings["summarisation"] = time.perf_counter() - start
         current_step += 1
-        self._report_progress("Summarisation", current_step, step_count)
+        self._report_progress("Summarisation (deferred)", current_step, step_count)
 
         # Step f: Risk scoring
         start = time.perf_counter()
@@ -122,4 +117,32 @@ class AnalysisOrchestrator:
         )
         self._cache[filename] = result
         return result
+
+    def summarise(self, filename: str) -> FullReportSummary:
+        """Run summarisation separately (CPU-intensive, called asynchronously).
+
+        Extracts sections from the PDF and runs the BART model to produce
+        section summaries, an executive summary, and environmental commitments.
+        """
+        logger.info("Starting deferred summarisation for %s", filename)
+        start = time.perf_counter()
+
+        pdf_result = self.pdf_extractor.extract_all(filename)
+        sections_dict = {s.name: s.text for s in pdf_result.sections}
+        summary_result = self.summariser.summarise_full_report(sections_dict)
+
+        elapsed = time.perf_counter() - start
+        logger.info(
+            "Summarisation complete for %s in %.1fs — %d sections, %d commitments",
+            filename,
+            elapsed,
+            len(summary_result.section_summaries),
+            len(summary_result.commitments),
+        )
+
+        # Update the cache if it exists
+        if filename in self._cache:
+            self._cache[filename].summary = summary_result
+
+        return summary_result
 

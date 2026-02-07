@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Download } from 'lucide-react'
 import { api } from '../services/api'
 import { MetricsCard } from '../components/MetricsCard'
@@ -56,9 +56,18 @@ type AnalysisData = {
   }
 }
 
+type SummaryResponse = {
+  status: 'pending' | 'completed'
+  executive_summary: string
+  section_summaries: Array<{ section_name: string; summary: string }>
+  commitments: string[]
+}
+
 export function AnalysisPage(): JSX.Element {
   const { filename } = useParams<{ filename: string }>()
+  const queryClient = useQueryClient()
 
+  // Main analysis query (returns fast — no summarisation)
   const { data: analysis, isLoading, error } = useQuery<AnalysisData>({
     queryKey: ['analysis', filename],
     queryFn: async () => {
@@ -68,6 +77,53 @@ export function AnalysisPage(): JSX.Element {
     },
     enabled: !!filename,
   })
+
+  // Check if summary already exists in DB
+  const { data: summaryCheck } = useQuery<SummaryResponse>({
+    queryKey: ['summary-check', filename],
+    queryFn: async () => {
+      const res = await api.get(`/analysis/${encodeURIComponent(filename!)}/summary`)
+      return res.data
+    },
+    enabled: !!filename && !!analysis,
+  })
+
+  // Mutation to trigger background summarisation
+  const summariseMutation = useMutation<SummaryResponse>({
+    mutationFn: async () => {
+      const res = await api.post(`/analysis/${encodeURIComponent(filename!)}/summarise`)
+      return res.data
+    },
+    onSuccess: (data) => {
+      // Update the summary check cache so UI refreshes
+      queryClient.setQueryData(['summary-check', filename], data)
+      // Also update the main analysis cache with new summary
+      queryClient.setQueryData<AnalysisData>(['analysis', filename], (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          summary: {
+            executive_summary: data.executive_summary,
+            section_summaries: data.section_summaries,
+            commitments: data.commitments,
+          },
+        }
+      })
+    },
+  })
+
+  // Determine the actual summary to display
+  const summaryReady = summaryCheck?.status === 'completed'
+  const summaryData = summaryReady
+    ? {
+        executive_summary: summaryCheck.executive_summary,
+        section_summaries: summaryCheck.section_summaries,
+        commitments: summaryCheck.commitments,
+      }
+    : analysis?.summary ?? { executive_summary: '', section_summaries: [], commitments: [] }
+
+  const isSummarising = summariseMutation.isPending
+  const summaryNeedsGeneration = !!analysis && summaryCheck?.status === 'pending' && !isSummarising && !summariseMutation.isSuccess
 
   const formatFilename = (filename?: string) => {
     if (!filename) return 'Report'
@@ -141,11 +197,21 @@ export function AnalysisPage(): JSX.Element {
         <GreenwashingFlags greenwashing={analysis.greenwashing} />
 
         <div className="lg:col-span-2">
-          <ReportSummary summary={analysis.summary} />
+          <ReportSummary
+            summary={summaryData}
+            isLoading={isSummarising}
+            needsGeneration={summaryNeedsGeneration}
+            onGenerate={() => summariseMutation.mutate()}
+            error={summariseMutation.error?.message}
+          />
         </div>
 
         <div className="lg:col-span-2">
-          <CommitmentsList commitments={analysis.summary.commitments} />
+          <CommitmentsList
+            commitments={summaryData.commitments}
+            isLoading={isSummarising}
+            needsGeneration={summaryNeedsGeneration}
+          />
         </div>
       </div>
     </section>
