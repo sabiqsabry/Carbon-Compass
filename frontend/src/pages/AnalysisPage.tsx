@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { ArrowLeft, Download } from 'lucide-react'
 import { api } from '../services/api'
 import { MetricsCard } from '../components/MetricsCard'
@@ -56,8 +57,7 @@ type AnalysisData = {
   }
 }
 
-type SummaryResponse = {
-  status: 'pending' | 'completed'
+type SummaryData = {
   executive_summary: string
   section_summaries: Array<{ section_name: string; summary: string }>
   commitments: string[]
@@ -65,7 +65,9 @@ type SummaryResponse = {
 
 export function AnalysisPage(): JSX.Element {
   const { filename } = useParams<{ filename: string }>()
-  const queryClient = useQueryClient()
+
+  // Local state for the generated summary (persists across re-renders, not dependent on DB)
+  const [generatedSummary, setGeneratedSummary] = useState<SummaryData | null>(null)
 
   // Main analysis query (returns fast — no summarisation)
   const { data: analysis, isLoading, error } = useQuery<AnalysisData>({
@@ -78,61 +80,46 @@ export function AnalysisPage(): JSX.Element {
     enabled: !!filename,
   })
 
-  // Check if summary already exists in DB
-  const { data: summaryCheck } = useQuery<SummaryResponse>({
-    queryKey: ['summary-check', filename],
-    queryFn: async () => {
-      const res = await api.get(`/analysis/${encodeURIComponent(filename!)}/summary`)
-      return res.data
-    },
-    enabled: !!filename && !!analysis,
-  })
-
-  // Mutation to trigger background summarisation
-  const summariseMutation = useMutation<SummaryResponse>({
+  // Mutation to trigger summarisation
+  const summariseMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post(`/analysis/${encodeURIComponent(filename!)}/summarise`)
-      return res.data
+      return res.data as SummaryData
     },
-    onSuccess: (data) => {
-      // Update the summary check cache so UI refreshes
-      queryClient.setQueryData(['summary-check', filename], data)
-      // Also update the main analysis cache with new summary
-      queryClient.setQueryData<AnalysisData>(['analysis', filename], (old) => {
-        if (!old) return old
-        return {
-          ...old,
-          summary: {
-            executive_summary: data.executive_summary,
-            section_summaries: data.section_summaries,
-            commitments: data.commitments,
-          },
-        }
-      })
+    onSuccess: (data: SummaryData) => {
+      setGeneratedSummary(data)
     },
   })
 
-  // Determine the actual summary to display
-  const summaryReady = summaryCheck?.status === 'completed'
-  const summaryData = summaryReady
-    ? {
-        executive_summary: summaryCheck.executive_summary,
-        section_summaries: summaryCheck.section_summaries,
-        commitments: summaryCheck.commitments,
-      }
-    : analysis?.summary ?? { executive_summary: '', section_summaries: [], commitments: [] }
+  // Determine what summary to show:
+  // 1. Generated summary from mutation (highest priority — fresh from model)
+  // 2. Analysis summary from initial load (if it already has content from DB)
+  // 3. Empty (needs generation)
+  const analysisSummary = analysis?.summary
+  const hasSummaryFromAnalysis =
+    analysisSummary &&
+    (analysisSummary.executive_summary.length > 0 || analysisSummary.section_summaries.length > 0)
+
+  const summaryData: SummaryData = generatedSummary
+    ? generatedSummary
+    : hasSummaryFromAnalysis
+      ? analysisSummary
+      : { executive_summary: '', section_summaries: [], commitments: [] }
 
   const isSummarising = summariseMutation.isPending
-  const summaryNeedsGeneration = !!analysis && summaryCheck?.status === 'pending' && !isSummarising && !summariseMutation.isSuccess
+  const summaryNeedsGeneration = !!analysis && !generatedSummary && !hasSummaryFromAnalysis && !isSummarising
 
-  const formatFilename = (filename?: string) => {
-    if (!filename) return 'Report'
-    return filename.replace(/\.pdf$/i, '').replace(/[_-]/g, ' ').trim()
+  const formatFilename = (f?: string) => {
+    if (!f) return 'Report'
+    return f.replace(/\.pdf$/i, '').replace(/[_-]/g, ' ').trim()
   }
 
   const downloadJSON = () => {
     if (!analysis || !filename) return
-    const dataStr = JSON.stringify(analysis, null, 2)
+    const exportData = generatedSummary
+      ? { ...analysis, summary: generatedSummary }
+      : analysis
+    const dataStr = JSON.stringify(exportData, null, 2)
     const dataBlob = new Blob([dataStr], { type: 'application/json' })
     const url = URL.createObjectURL(dataBlob)
     const link = document.createElement('a')

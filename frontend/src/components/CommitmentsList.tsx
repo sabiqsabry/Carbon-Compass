@@ -1,9 +1,36 @@
-import { Target, Calendar, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Target, Calendar, Loader2, Clock } from 'lucide-react'
 
 type CommitmentsListProps = {
   commitments: string[]
   isLoading?: boolean
   needsGeneration?: boolean
+}
+
+function ElapsedTimer() {
+  const startRef = useRef(0)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const now = Date.now()
+    startRef.current = now
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - now) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+      <Clock className="h-3 w-3" />
+      <span className="tabular-nums">
+        {mins > 0 ? `${mins}m ${secs.toString().padStart(2, '0')}s` : `${secs}s`}
+      </span>
+    </div>
+  )
 }
 
 export function CommitmentsList({ commitments, isLoading, needsGeneration }: CommitmentsListProps) {
@@ -29,6 +56,7 @@ export function CommitmentsList({ commitments, isLoading, needsGeneration }: Com
         <div className="flex items-center gap-3 py-8 justify-center">
           <Loader2 className="h-5 w-5 text-emerald-400 animate-spin" />
           <p className="text-sm text-slate-400">Extracting commitments...</p>
+          <ElapsedTimer />
         </div>
       ) : needsGeneration ? (
         <p className="text-sm text-slate-500 text-center py-8">

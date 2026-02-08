@@ -33,7 +33,7 @@ class Summariser:
     for compatibility with both transformers v4.x and v5.x.
     """
 
-    def __init__(self, model_name: str = "facebook/bart-large-cnn") -> None:
+    def __init__(self, model_name: str = "sshleifer/distilbart-cnn-12-6") -> None:
         self.model_name = model_name
         self._model: AutoModelForSeq2SeqLM | None = None
         self._tokenizer: AutoTokenizer | None = None
@@ -88,10 +88,11 @@ class Summariser:
                 summary_ids = model.generate(
                     **inputs,
                     max_length=max_length,
-                    min_length=max(max_length // 3, 10),
-                    num_beams=4,
-                    length_penalty=2.0,
+                    min_length=max(max_length // 4, 8),
+                    num_beams=2,
+                    length_penalty=1.0,
                     early_stopping=True,
+                    no_repeat_ngram_size=3,
                 )
 
             decoded = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
@@ -113,10 +114,11 @@ class Summariser:
             summary_ids = model.generate(
                 **inputs,
                 max_length=max_length,
-                min_length=max(max_length // 3, 10),
-                num_beams=4,
-                length_penalty=2.0,
+                min_length=max(max_length // 4, 8),
+                num_beams=2,
+                length_penalty=1.0,
                 early_stopping=True,
+                no_repeat_ngram_size=3,
             )
 
         return tokenizer.decode(summary_ids[0], skip_special_tokens=True).strip()

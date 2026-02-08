@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, FileText, Loader2, Sparkles, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChevronDown, ChevronUp, FileText, Loader2, Sparkles, AlertCircle, Clock } from 'lucide-react'
 
 type SummaryData = {
   executive_summary: string
@@ -18,13 +18,42 @@ type ReportSummaryProps = {
   error?: string
 }
 
+function ElapsedTimer() {
+  const startRef = useRef(0)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const now = Date.now()
+    startRef.current = now
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - now) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const mins = Math.floor(elapsed / 60)
+  const secs = elapsed % 60
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+      <Clock className="h-3 w-3" />
+      <span className="tabular-nums">
+        {mins > 0 ? `${mins}m ${secs.toString().padStart(2, '0')}s` : `${secs}s`}
+      </span>
+    </div>
+  )
+}
+
 function ProgressBar() {
   return (
     <div className="space-y-4 py-6">
       <div className="flex items-center gap-3">
         <Loader2 className="h-5 w-5 text-emerald-400 animate-spin flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-slate-200">Generating report summary...</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-200">Generating report summary...</p>
+            <ElapsedTimer />
+          </div>
           <p className="text-xs text-slate-500 mt-0.5">
             The AI model is analysing each section. This may take a minute on first run.
           </p>
@@ -72,7 +101,7 @@ export function ReportSummary({ summary, isLoading, needsGeneration, onGenerate,
               AI-powered summaries are available
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              Generate section-by-section summaries and an executive overview using our BART model
+              Generate section-by-section summaries and an executive overview using our AI model
             </p>
           </div>
           <button
